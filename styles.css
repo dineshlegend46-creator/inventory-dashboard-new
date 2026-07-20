@@ -1410,4 +1410,325 @@ button, input, select, textarea {
   color: #f87171;
 }
 
+/* --- Notification & Alerts Page Styles --- */
+.alerts-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .alerts-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-group {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input-field {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.input-field:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 10px var(--accent-purple-glow);
+}
+
+.checkbox-toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+/* Premium toggle switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-color);
+  transition: .4s;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: var(--accent-purple-glow);
+  border-color: var(--accent-purple);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: var(--accent-purple);
+}
+
+/* Phone Simulator styling */
+.simulator-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.phone-mockup {
+  width: 300px;
+  height: 580px;
+  background: #1e293b;
+  border: 12px solid #0f172a;
+  border-radius: 36px;
+  box-shadow: var(--shadow-lg), 0 0 0 4px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Phone speaker/notch */
+.phone-mockup::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 24px;
+  background: #0f172a;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  z-index: 10;
+}
+
+.phone-screen {
+  flex: 1;
+  background: #0b0f19;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 14px 14px 14px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #fff;
+  overflow: hidden;
+}
+
+.phone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.phone-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.phone-alerts-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+/* Hide scrollbar for screen list */
+.phone-alerts-list::-webkit-scrollbar {
+  display: none;
+}
+
+.phone-msg-bubble {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  position: relative;
+  animation: slideInUp 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.phone-msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.phone-msg-tag {
+  padding: 1px 4px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.phone-msg-tag.sms {
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+}
+
+.phone-msg-tag.email {
+  background: rgba(139, 92, 246, 0.2);
+  color: #c084fc;
+}
+
+.phone-msg-tag.whatsapp {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.phone-msg-time {
+  color: #64748b;
+}
+
+.phone-msg-body {
+  color: #e2e8f0;
+}
+
+.phone-msg-sku {
+  font-family: monospace;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+/* Custom Notification Alerts List */
+.alerts-list-table th, .alerts-list-table td {
+  padding: 12px 16px;
+}
+
+.btn-notif-action {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.btn-notif-action.wa {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.btn-notif-action.wa:hover {
+  background: #10b981;
+  color: #fff;
+}
+
+.btn-notif-action.mail {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.2);
+}
+.btn-notif-action.mail:hover {
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.btn-notif-action.sms {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+  border-color: rgba(6, 182, 212, 0.2);
+}
+.btn-notif-action.sms:hover {
+  background: #06b6d4;
+  color: #fff;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 

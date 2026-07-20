@@ -3,6 +3,8 @@ import socketserver
 import json
 import os
 import urllib.parse
+import urllib.request
+import base64
 from datetime import datetime
 
 PORT = 8000
@@ -230,6 +232,110 @@ class DashboardRequestHandler(http.server.BaseHTTPRequestHandler):
             else:
                 self.send_json({"error": "Failed to save to database"}, 500)
             return
+
+        # POST /api/alerts/send
+        elif path == "/api/alerts/send":
+            alert_type = body.get("type")
+            recipient = body.get("to")
+            message_body = body.get("body")
+            subject = body.get("subject", "StockAlert Notification")
+            
+            if not alert_type or not recipient or not message_body:
+                self.send_json({"error": "Missing type, to, or body parameters"}, 400)
+                return
+                
+            if alert_type == "email":
+                # Check for SMTP environment variables
+                smtp_server = os.environ.get("SMTP_SERVER")
+                smtp_port = os.environ.get("SMTP_PORT", "587")
+                smtp_user = os.environ.get("SMTP_USER")
+                smtp_password = os.environ.get("SMTP_PASSWORD")
+                
+                if smtp_server and smtp_user and smtp_password:
+                    try:
+                        import smtplib
+                        from email.mime.text import MIMEText
+                        
+                        msg = MIMEText(message_body)
+                        msg['Subject'] = subject
+                        msg['From'] = smtp_user
+                        msg['To'] = recipient
+                        
+                        port = int(smtp_port)
+                        if port == 465:
+                            server = smtplib.SMTP_SSL(smtp_server, port)
+                        else:
+                            server = smtplib.SMTP(smtp_server, port)
+                            server.starttls()
+                            
+                        server.login(smtp_user, smtp_password)
+                        server.send_message(msg)
+                        server.quit()
+                        
+                        print(f"\n[ALERT - EMAIL] Sent live email to {recipient}\nSubject: {subject}\n")
+                        self.send_json({"success": True, "message": f"Live email successfully sent to {recipient} via SMTP!"})
+                    except Exception as e:
+                        print(f"\n[ALERT - EMAIL ERROR] Live email to {recipient} failed: {e}\n")
+                        self.send_json({"success": False, "error": f"SMTP sending failed: {e}"}, 500)
+                else:
+                    # Mock Simulation Mode
+                    print(f"\n==========================================")
+                    print(f"[MOCK ALERT - EMAIL SIMULATION]")
+                    print(f"To: {recipient}")
+                    print(f"Subject: {subject}")
+                    print(f"Body:")
+                    print(f"------------------------------------------")
+                    print(message_body)
+                    print(f"==========================================\n")
+                    self.send_json({
+                        "success": True, 
+                        "message": f"Mock Alert: Email simulated successfully to {recipient} (Configure SMTP_SERVER env for live emails)."
+                    })
+                return
+                
+            elif alert_type == "sms":
+                # Check for Twilio environment variables
+                twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+                twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+                twilio_from = os.environ.get("TWILIO_PHONE_NUMBER")
+                
+                if twilio_sid and twilio_token and twilio_from:
+                    try:
+                        url = f"https://api.twilio.com/2010-04-01/Accounts/{twilio_sid}/Messages.json"
+                        req_data = urllib.parse.urlencode({
+                            "To": recipient,
+                            "From": twilio_from,
+                            "Body": message_body
+                        }).encode("utf-8")
+                        
+                        req = urllib.request.Request(url, data=req_data, method="POST")
+                        auth_str = f"{twilio_sid}:{twilio_token}"
+                        b64_auth = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+                        req.add_header("Authorization", f"Basic {b64_auth}")
+                        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+                        
+                        with urllib.request.urlopen(req) as res:
+                            res_content = res.read().decode("utf-8")
+                            
+                        print(f"\n[ALERT - SMS] Sent live Twilio SMS to {recipient}\nBody: {message_body}\n")
+                        self.send_json({"success": True, "message": f"Live SMS successfully sent to {recipient} via Twilio API!"})
+                    except Exception as e:
+                        print(f"\n[ALERT - SMS ERROR] Live SMS to {recipient} failed: {e}\n")
+                        self.send_json({"success": False, "error": f"Twilio API failed: {e}"}, 500)
+                else:
+                    # Mock Simulation Mode
+                    print(f"\n==========================================")
+                    print(f"[MOCK ALERT - SMS SIMULATION]")
+                    print(f"To: {recipient}")
+                    print(f"Body:")
+                    print(f"------------------------------------------")
+                    print(message_body)
+                    print(f"==========================================\n")
+                    self.send_json({
+                        "success": True,
+                        "message": f"Mock Alert: SMS simulated successfully to {recipient} (Configure TWILIO_ACCOUNT_SID env for live SMS)."
+                    })
+                return
 
         self.send_json({"error": "Not Found"}, 404)
 

@@ -21,6 +21,29 @@ document.addEventListener("DOMContentLoaded", () => {
       logs: [],
       activeSlide: 0,
       isReordering: false
+    },
+    notifications: {
+      email: localStorage.getItem("alert_email") || "dinesh@example.com",
+      mobile: localStorage.getItem("alert_mobile") || "+919876543210",
+      twilioSid: localStorage.getItem("alert_twilio_sid") || "",
+      twilioToken: localStorage.getItem("alert_twilio_token") || "",
+      twilioFrom: localStorage.getItem("alert_twilio_from") || "",
+      emailjsService: localStorage.getItem("alert_emailjs_service") || "",
+      emailjsTemplate: localStorage.getItem("alert_emailjs_template") || "",
+      emailjsKey: localStorage.getItem("alert_emailjs_key") || "",
+      enableLowStockSMS: localStorage.getItem("alert_enable_low_stock_sms") !== "false", // Default to true
+      enableLowStockEmail: localStorage.getItem("alert_enable_low_stock_email") !== "false", // Default to true
+      enableExpirySMS: localStorage.getItem("alert_enable_expiry_sms") !== "false",
+      enableExpiryEmail: localStorage.getItem("alert_enable_expiry_email") !== "false",
+      transportType: localStorage.getItem("alert_transport_type") || "client",
+      history: (() => {
+        try {
+          const hist = JSON.parse(localStorage.getItem("alert_history") || "[]");
+          return Array.isArray(hist) ? hist : [];
+        } catch (e) {
+          return [];
+        }
+      })()
     }
   };
 
@@ -225,6 +248,8 @@ document.addEventListener("DOMContentLoaded", () => {
         this.saveFallbackData(localData);
         showToast(id ? "Product updated successfully (Offline Mode)" : "Product created successfully (Offline Mode)", "success");
         await this.fetchItems();
+        const savedItem = state.items.find(x => x.sku.toUpperCase() === itemData.sku.toUpperCase());
+        if (savedItem) checkStockAlerts(savedItem);
         return true;
       }
 
@@ -242,6 +267,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         showToast(id ? "Product updated successfully" : "Product created successfully", "success");
         await this.fetchItems();
+        const savedItem = state.items.find(x => x.sku.toUpperCase() === itemData.sku.toUpperCase());
+        if (savedItem) checkStockAlerts(savedItem);
         return true;
       } catch (err) {
         showToast(err.message, "error");
@@ -361,7 +388,8 @@ document.addEventListener("DOMContentLoaded", () => {
         locations: "Warehouse Locations & Zoning",
         expiry: "Expiry Monitoring & Promotions",
         reorder: "Auto-Reorder Panel",
-        shelf: "IoT Predictive Shelf Prototype"
+        shelf: "IoT Predictive Shelf Prototype",
+        alerts: "Notification & Alerts Configuration"
       };
       pageTitle.textContent = tabTitles[state.currentTab] || "StockMind AI";
       
@@ -438,6 +466,13 @@ document.addEventListener("DOMContentLoaded", () => {
     await API.fetchItems();
     updateGlobalNotifications();
     renderPage();
+
+    // Request system notifications permission on startup
+    if ("Notification" in window && Notification.permission === "default") {
+      setTimeout(() => {
+        Notification.requestPermission();
+      }, 2000);
+    }
   }
 
   function updateGlobalNotifications() {
@@ -494,6 +529,9 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       case "shelf":
         renderShelfPage();
+        break;
+      case "alerts":
+        renderAlertsPage();
         break;
       default:
         contentArea.innerHTML = `<h3>Tab page not found.</h3>`;
@@ -2128,6 +2166,577 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("returnShelfBtn").addEventListener("click", handleReturnItem);
     document.getElementById("restockShelfBtn").addEventListener("click", handleRestockItem);
 
+  }
+
+  // Set to keep track of automated alerts sent in current session
+  state.notifications.automatedSent = new Set();
+
+  function checkStockAlerts(item) {
+    if (!item) return;
+    if (item.quantity <= item.reorderLevel) {
+      if (!state.notifications.automatedSent.has(item.id)) {
+        state.notifications.automatedSent.add(item.id);
+        
+        // Show HTML5 Notification if supported and permitted
+        if ("Notification" in window) {
+          if (Notification.permission === "granted") {
+            new Notification("StockMind AI Alert", {
+              body: `Low stock detected! SKU: ${item.sku}. Item: ${item.name}. Quantity: ${item.quantity}.`
+            });
+          }
+        }
+        
+        // Dispatch notifications if automated alerts are set to true
+        if (state.notifications.enableLowStockSMS) {
+          sendAlertNotification(item, "sms", "auto");
+        }
+        if (state.notifications.enableLowStockEmail) {
+          sendAlertNotification(item, "email", "auto");
+        }
+      }
+    } else {
+      // If quantity goes above threshold, clear the sent flag so it can alert again if it falls below later
+      state.notifications.automatedSent.delete(item.id);
+    }
+  }
+
+  async function sendAlertNotification(item, type, mode = "manual", alertType = "lowstock") {
+    const isTest = mode === "manual-test";
+    
+    // Construct Message
+    let text = "";
+    let subject = "";
+    let emailBody = "";
+
+    if (alertType === "expiry") {
+      subject = `[StockAlert] EXPIRY WARNING: ${item.name} (${item.sku})`;
+      text = `⚠️ *Expiry Alert* ⚠️\n\nProduct *${item.name}* (SKU: ${item.sku}) is expiring on *${item.expiryDate}*!\n\n_Please discount or re-shelve this item._`;
+      emailBody = `Stock Expiration Warning from StockMind AI:\n\nThe product "${item.name}" (SKU: ${item.sku}) is expiring on ${item.expiryDate}.\n\nCurrent quantity: ${item.quantity}\nLocation: ${item.location}\n\nSent on: ${new Date().toLocaleString()}`;
+    } else {
+      subject = `[StockAlert] Low stock: ${item.name} (${item.sku})`;
+      text = `⚠️ *Low Stock Alert* ⚠️\n\nProduct *${item.name}* (SKU: ${item.sku}) is low on stock!\n\nCurrent stock: *${item.quantity}* units\nReorder Level: *${item.reorderLevel}* units\nLocation: *${item.location}*\n\n_Please procure a replenishment._`;
+      emailBody = `Stock Threshold Alert from StockMind AI:\n\nThe product "${item.name}" (SKU: ${item.sku}) has fallen below its reorder threshold.\n\nCurrent quantity: ${item.quantity}\nReorder level: ${item.reorderLevel}\nLocation: ${item.location}\n\nSent on: ${new Date().toLocaleString()}`;
+    }
+
+    if (type === "whatsapp") {
+      // Direct redirection Click-to-chat
+      const formattedNum = state.notifications.mobile.replace(/[^\d+]/g, '');
+      const waUrl = `https://wa.me/${formattedNum}?text=${encodeURIComponent(text.replace(/\*/g, ''))}`;
+      window.open(waUrl, "_blank");
+
+      addAlertHistory("whatsapp", item.sku, `WhatsApp Alert dispatched to ${state.notifications.mobile}`);
+      showToast("WhatsApp click-to-chat window opened!", "success");
+    } 
+    
+    else if (type === "email") {
+      if (state.notifications.transportType === "client") {
+        // Client side options
+        if (state.notifications.emailjsKey && state.notifications.emailjsService && state.notifications.emailjsTemplate) {
+          try {
+            const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                service_id: state.notifications.emailjsService,
+                template_id: state.notifications.emailjsTemplate,
+                user_id: state.notifications.emailjsKey,
+                template_params: {
+                  to_email: state.notifications.email,
+                  subject: subject,
+                  product_name: item.name,
+                  sku: item.sku,
+                  quantity: item.quantity,
+                  reorder_level: item.reorderLevel || "N/A",
+                  location: item.location,
+                  message: emailBody
+                }
+              })
+            });
+            if (res.ok) {
+              addAlertHistory("email", item.sku, `Email sent to ${state.notifications.email} via EmailJS`);
+              showToast("Email alert sent successfully via EmailJS!", "success");
+            } else {
+              throw new Error("EmailJS service error");
+            }
+          } catch (err) {
+            showToast("EmailJS failed. Falling back to Mailto link.", "warning");
+            openMailtoLink(state.notifications.email, subject, emailBody, item.sku);
+          }
+        } else {
+          openMailtoLink(state.notifications.email, subject, emailBody, item.sku);
+        }
+      } else {
+        // Backend Server Routing
+        try {
+          const res = await fetch("/api/alerts/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "email",
+              to: state.notifications.email,
+              subject: subject,
+              body: emailBody
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            addAlertHistory("email", item.sku, `Email Alert dispatched via Python Server`);
+            showToast(data.message || "Email alert sent via Server!", "success");
+          } else {
+            throw new Error(data.error || "Server failed");
+          }
+        } catch (err) {
+          showToast(`Server alert failed: ${err.message}. Falling back to Mailto.`, "warning");
+          openMailtoLink(state.notifications.email, subject, emailBody, item.sku);
+        }
+      }
+    } 
+    
+    else if (type === "sms") {
+      const plainMsg = text.replace(/\*/g, '').replace(/⚠️/g, 'Alert:');
+      if (state.notifications.transportType === "client") {
+        if (state.notifications.twilioSid && state.notifications.twilioToken && state.notifications.twilioFrom) {
+          try {
+            const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${state.notifications.twilioSid}/Messages.json`;
+            const auth = btoa(`${state.notifications.twilioSid}:${state.notifications.twilioToken}`);
+            const res = await fetch(twilioUrl, {
+              method: "POST",
+              headers: {
+                "Authorization": `Basic ${auth}`,
+                "Content-Type": "application/x-www-form-urlencoded"
+              },
+              body: new URLSearchParams({
+                To: state.notifications.mobile,
+                From: state.notifications.twilioFrom,
+                Body: plainMsg
+              })
+            });
+            if (res.ok) {
+              addAlertHistory("sms", item.sku, `SMS alert sent to ${state.notifications.mobile} via Twilio API`);
+              showToast("SMS sent successfully via Twilio client!", "success");
+            } else {
+              throw new Error("Twilio API failed");
+            }
+          } catch (err) {
+            showToast(`Twilio direct API failed. Simulating SMS locally.`, "warning");
+            addAlertHistory("sms", item.sku, `[Simulated] SMS to ${state.notifications.mobile}: ${plainMsg}`);
+          }
+        } else {
+          showToast(`Twilio SMS not configured. Simulating SMS locally.`, "info");
+          addAlertHistory("sms", item.sku, `[Simulated] SMS to ${state.notifications.mobile}: ${plainMsg}`);
+        }
+      } else {
+        // Backend Server Routing
+        try {
+          const res = await fetch("/api/alerts/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "sms",
+              to: state.notifications.mobile,
+              body: plainMsg
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            addAlertHistory("sms", item.sku, `SMS sent to ${state.notifications.mobile} via Server`);
+            showToast(data.message || "SMS Alert sent via Server!", "success");
+          } else {
+            throw new Error(data.error || "Server failed");
+          }
+        } catch (err) {
+          showToast(`Server alert failed: ${err.message}. Simulating SMS locally.`, "warning");
+          addAlertHistory("sms", item.sku, `[Simulated] SMS to ${state.notifications.mobile}: ${plainMsg}`);
+        }
+      }
+    }
+  }
+
+  function openMailtoLink(email, subject, body, sku) {
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+    addAlertHistory("email", sku, `Mail client opened for ${email}`);
+    showToast("Native mail client triggered!", "success");
+  }
+
+  function addAlertHistory(type, sku, message) {
+    state.notifications.history.unshift({
+      id: `alert-${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString(),
+      type: type,
+      sku: sku,
+      message: message
+    });
+    if (state.notifications.history.length > 10) {
+      state.notifications.history.pop();
+    }
+    localStorage.setItem("alert_history", JSON.stringify(state.notifications.history));
+    
+    if (state.currentTab === "alerts") {
+      const streamDiv = document.getElementById("phoneAlertsStream");
+      if (streamDiv) {
+        streamDiv.innerHTML = state.notifications.history.map(hist => `
+          <div class="phone-msg-bubble">
+            <div class="phone-msg-header">
+              <span class="phone-msg-tag ${hist.type}">${hist.type}</span>
+              <span class="phone-msg-time">${hist.timestamp}</span>
+            </div>
+            <div class="phone-msg-body">
+              ${hist.sku ? `SKU: <span class="phone-msg-sku">${hist.sku}</span><br/>` : ""}
+              ${hist.message}
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+  }
+
+  function renderAlertsPage() {
+    const lowStockItems = state.items.filter(x => x.quantity <= x.reorderLevel);
+    const dateToday = new Date("2026-07-07");
+    const expiringItems = state.items.filter(x => {
+      if (!x.expiryDate) return false;
+      const days = Math.ceil((new Date(x.expiryDate) - dateToday) / (1000 * 60 * 60 * 24));
+      return days <= 30;
+    });
+
+    const totalAlertCount = lowStockItems.length + expiringItems.length;
+
+    contentArea.innerHTML = `
+      <div class="alerts-layout">
+        <!-- Left Panel: Settings Form -->
+        <div class="card settings-card">
+          <div class="card-title">Alert & Notification Panel</div>
+          
+          <form id="alertSettingsForm" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Target Contacts -->
+            <div class="settings-group">
+              <div class="settings-group-title">Recipient Configurations</div>
+              <div class="input-field-group">
+                <label class="input-field-label">Target Email Address</label>
+                <input type="email" class="input-field" id="alertEmailInput" value="${state.notifications.email}" required />
+              </div>
+              <div class="input-field-group">
+                <label class="input-field-label">Target Mobile Number (With Country Code)</label>
+                <input type="text" class="input-field" id="alertMobileInput" value="${state.notifications.mobile}" placeholder="+919876543210" required />
+              </div>
+            </div>
+
+            <!-- Transport Select -->
+            <div class="settings-group">
+              <div class="settings-group-title">Routing Transport Mechanism</div>
+              <div class="input-field-group">
+                <select class="select-custom" id="alertTransportSelect" style="width: 100%;">
+                  <option value="client" ${state.notifications.transportType === "client" ? "selected" : ""}>Direct Frontend Routing (mailto, wa.me Click-to-Chat)</option>
+                  <option value="server" ${state.notifications.transportType === "server" ? "selected" : ""}>Local Server Routing (Calls python backend server)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Auto Rules Toggles -->
+            <div class="settings-group">
+              <div class="settings-group-title">Alert Triggers & Rules</div>
+              <div class="checkbox-toggle-container">
+                <div>
+                  <div style="font-weight: 600; font-size:13px;">Low Stock Alerts</div>
+                  <div style="font-size:11px; color: var(--text-muted);">Alert when product stock is below reorder level</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggleLowStockSMS" ${state.notifications.enableLowStockSMS ? "checked" : ""} />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="checkbox-toggle-container">
+                <div>
+                  <div style="font-weight: 600; font-size:13px;">Expiry Alerts</div>
+                  <div style="font-size:11px; color: var(--text-muted);">Alert when product is within 30 days of expiration</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggleExpirySMS" ${state.notifications.enableExpirySMS ? "checked" : ""} />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Advanced Config: Third Party Integrations -->
+            <div class="settings-group" style="background: rgba(139, 92, 246, 0.05);">
+              <div class="settings-group-title" style="cursor:pointer;" id="advancedToggle">
+                <span>Advanced Integrations (Twilio / EmailJS)</span>
+                <span id="advChevron" style="font-size:12px;">▼</span>
+              </div>
+              <div id="advancedSettingsContent" style="display: none; flex-direction: column; gap: 12px; margin-top: 8px;">
+                <div style="font-size:11px; color: var(--text-muted); line-height: 1.4;">
+                  Enter details to connect directly to Twilio SMS and EmailJS from the static frontend. If blank, SMS alerts will mock/verify, and Email alerts will fall back to native client mailto links.
+                </div>
+                <div class="input-field-group">
+                  <label class="input-field-label">Twilio Account SID</label>
+                  <input type="text" class="input-field" id="alertTwilioSid" value="${state.notifications.twilioSid}" />
+                </div>
+                <div class="input-field-group">
+                  <label class="input-field-label">Twilio Auth Token</label>
+                  <input type="password" class="input-field" id="alertTwilioToken" value="${state.notifications.twilioToken}" />
+                </div>
+                <div class="input-field-group">
+                  <label class="input-field-label">Twilio Phone Number (From)</label>
+                  <input type="text" class="input-field" id="alertTwilioFrom" value="${state.notifications.twilioFrom}" />
+                </div>
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 8px 0;" />
+                <div class="input-field-group">
+                  <label class="input-field-label">EmailJS Public Key</label>
+                  <input type="text" class="input-field" id="alertEmailjsKey" value="${state.notifications.emailjsKey}" />
+                </div>
+                <div class="input-field-group">
+                  <label class="input-field-label">EmailJS Service ID</label>
+                  <input type="text" class="input-field" id="alertEmailjsService" value="${state.notifications.emailjsService}" />
+                </div>
+                <div class="input-field-group">
+                  <label class="input-field-label">EmailJS Template ID</label>
+                  <input type="text" class="input-field" id="alertEmailjsTemplate" value="${state.notifications.emailjsTemplate}" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div style="display: flex; gap: 12px;">
+              <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center;">Save Configuration</button>
+              <button type="button" class="btn btn-secondary" id="btnSendTestAlert" style="justify-content:center;">Send Test Alert</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Right Panel: Live Alerts List & Simulator -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Mock Phone Simulator -->
+          <div class="card" style="padding: 20px;">
+            <div class="card-title">Live Notification Stream</div>
+            <div class="simulator-container">
+              <div class="phone-mockup">
+                <div class="phone-screen">
+                  <div class="phone-header">
+                    <span>StockMind AI</span>
+                    <span>100% 🔋</span>
+                  </div>
+                  <div class="phone-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    Mobile & Email Inbox
+                  </div>
+                  <div class="phone-alerts-list" id="phoneAlertsStream">
+                    ${state.notifications.history.length === 0 ? `
+                      <div style="text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 40px; line-height: 1.5;">
+                        <div style="font-size:24px; margin-bottom: 8px;">📲</div>
+                        No notifications sent yet in this session. Trigger one below to see the mockup smartphone render it in real-time!
+                      </div>
+                    ` : state.notifications.history.map(hist => `
+                      <div class="phone-msg-bubble">
+                        <div class="phone-msg-header">
+                          <span class="phone-msg-tag ${hist.type}">${hist.type}</span>
+                          <span class="phone-msg-time">${hist.timestamp}</span>
+                        </div>
+                        <div class="phone-msg-body">
+                          ${hist.sku ? `SKU: <span class="phone-msg-sku">${hist.sku}</span><br/>` : ""}
+                          ${hist.message}
+                        </div>
+                      </div>
+                    `).join("")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Active Alerts Table -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-title">
+          <span>Active Warehouse Threshold Alerts</span>
+          <span class="badge-status ${totalAlertCount > 0 ? 'lowstock' : 'instock'}">${totalAlertCount} active alerts</span>
+        </div>
+        <div class="table-container">
+          <table class="table-custom alerts-list-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Current stock</th>
+                <th>Alert Type</th>
+                <th style="text-align: right;">Manual Notification Triggers</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lowStockItems.length === 0 && expiringItems.length === 0 ? `
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 24px; color: var(--status-instock); font-weight:600;">
+                    ✓ All inventory stocks and expirations are in healthy status.
+                  </td>
+                </tr>
+              ` : ""}
+              ${lowStockItems.map(item => `
+                <tr>
+                  <td style="font-weight: 600;">${item.name} <code style="font-size:11px;">(${item.sku})</code></td>
+                  <td>${item.category}</td>
+                  <td>
+                    <span class="badge-status outstock">${item.quantity} units</span> 
+                    <span style="font-size:11px; color:var(--text-muted);">Threshold: ${item.reorderLevel}</span>
+                  </td>
+                  <td><span class="badge-status lowstock" style="padding: 2px 8px;">Low Stock</span></td>
+                  <td style="text-align: right;">
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                      <button class="btn-notif-action wa" data-id="${item.id}" data-type="whatsapp">
+                        💬 WhatsApp
+                      </button>
+                      <button class="btn-notif-action mail" data-id="${item.id}" data-type="email">
+                        ✉️ Email
+                      </button>
+                      <button class="btn-notif-action sms" data-id="${item.id}" data-type="sms">
+                        📱 SMS
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join("")}
+              ${expiringItems.map(item => {
+                const days = Math.ceil((new Date(item.expiryDate) - dateToday) / (1000 * 60 * 60 * 24));
+                return `
+                  <tr>
+                    <td style="font-weight: 600;">${item.name} <code style="font-size:11px;">(${item.sku})</code></td>
+                    <td>${item.category}</td>
+                    <td>Expiry: <code>${item.expiryDate}</code></td>
+                    <td><span class="badge-status outstock" style="padding: 2px 8px;">Expires in ${days} days</span></td>
+                    <td style="text-align: right;">
+                      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn-notif-action wa" data-id="${item.id}" data-type="whatsapp" data-alert="expiry">
+                          💬 WhatsApp
+                        </button>
+                        <button class="btn-notif-action mail" data-id="${item.id}" data-type="email" data-alert="expiry">
+                          ✉️ Email
+                        </button>
+                        <button class="btn-notif-action sms" data-id="${item.id}" data-type="sms" data-alert="expiry">
+                          📱 SMS
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Hook Advanced settings collapsible toggle
+    const advancedToggle = document.getElementById("advancedToggle");
+    const advancedSettingsContent = document.getElementById("advancedSettingsContent");
+    const advChevron = document.getElementById("advChevron");
+
+    advancedToggle.addEventListener("click", () => {
+      const isHidden = advancedSettingsContent.style.display === "none";
+      advancedSettingsContent.style.display = isHidden ? "flex" : "none";
+      advChevron.textContent = isHidden ? "▲" : "▼";
+    });
+
+    // Save configurations
+    const settingsForm = document.getElementById("alertSettingsForm");
+    if (settingsForm) {
+      settingsForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        try {
+          const emailInput = document.getElementById("alertEmailInput");
+          const mobileInput = document.getElementById("alertMobileInput");
+          const transportSelect = document.getElementById("alertTransportSelect");
+
+          if (!emailInput || !mobileInput || !transportSelect) {
+            throw new Error("Required configuration input fields are missing from the DOM.");
+          }
+
+          state.notifications.email = emailInput.value.trim();
+          state.notifications.mobile = mobileInput.value.trim();
+          state.notifications.transportType = transportSelect.value;
+          
+          const toggleLowStock = document.getElementById("toggleLowStockSMS");
+          const toggleExpiry = document.getElementById("toggleExpirySMS");
+
+          state.notifications.enableLowStockSMS = toggleLowStock ? toggleLowStock.checked : true;
+          state.notifications.enableLowStockEmail = toggleLowStock ? toggleLowStock.checked : true;
+          state.notifications.enableExpirySMS = toggleExpiry ? toggleExpiry.checked : true;
+          state.notifications.enableExpiryEmail = toggleExpiry ? toggleExpiry.checked : true;
+
+          const twilioSid = document.getElementById("alertTwilioSid");
+          const twilioToken = document.getElementById("alertTwilioToken");
+          const twilioFrom = document.getElementById("alertTwilioFrom");
+
+          state.notifications.twilioSid = twilioSid ? twilioSid.value.trim() : "";
+          state.notifications.twilioToken = twilioToken ? twilioToken.value.trim() : "";
+          state.notifications.twilioFrom = twilioFrom ? twilioFrom.value.trim() : "";
+
+          const emailjsKey = document.getElementById("alertEmailjsKey");
+          const emailjsService = document.getElementById("alertEmailjsService");
+          const emailjsTemplate = document.getElementById("alertEmailjsTemplate");
+
+          state.notifications.emailjsKey = emailjsKey ? emailjsKey.value.trim() : "";
+          state.notifications.emailjsService = emailjsService ? emailjsService.value.trim() : "";
+          state.notifications.emailjsTemplate = emailjsTemplate ? emailjsTemplate.value.trim() : "";
+
+          // Persist to localStorage
+          localStorage.setItem("alert_email", state.notifications.email);
+          localStorage.setItem("alert_mobile", state.notifications.mobile);
+          localStorage.setItem("alert_transport_type", state.notifications.transportType);
+          localStorage.setItem("alert_enable_low_stock_sms", state.notifications.enableLowStockSMS);
+          localStorage.setItem("alert_enable_low_stock_email", state.notifications.enableLowStockEmail);
+          localStorage.setItem("alert_enable_expiry_sms", state.notifications.enableExpirySMS);
+          localStorage.setItem("alert_enable_expiry_email", state.notifications.enableExpiryEmail);
+          
+          localStorage.setItem("alert_twilio_sid", state.notifications.twilioSid);
+          localStorage.setItem("alert_twilio_token", state.notifications.twilioToken);
+          localStorage.setItem("alert_twilio_from", state.notifications.twilioFrom);
+
+          localStorage.setItem("alert_emailjs_key", state.notifications.emailjsKey);
+          localStorage.setItem("alert_emailjs_service", state.notifications.emailjsService);
+          localStorage.setItem("alert_emailjs_template", state.notifications.emailjsTemplate);
+
+          showToast("Notification configurations saved successfully!", "success");
+          
+          // Refresh view
+          renderAlertsPage();
+        } catch (err) {
+          console.error("Save Configuration Error: ", err);
+          showToast(`Failed to save configuration: ${err.message}`, "error");
+        }
+      });
+    }
+
+    // Test Alert
+    document.getElementById("btnSendTestAlert").addEventListener("click", async () => {
+      showToast("Triggering test notifications...", "info");
+      const testItem = {
+        name: "Test Almond Milk (Demo SKU)",
+        sku: "TEST-SKU-999",
+        quantity: 3,
+        reorderLevel: 10,
+        location: "Zone A - Test Rack"
+      };
+      
+      await sendAlertNotification(testItem, "whatsapp", "manual-test");
+      await sendAlertNotification(testItem, "email", "manual-test");
+      await sendAlertNotification(testItem, "sms", "manual-test");
+    });
+
+    // Manual triggers
+    const triggerBtns = contentArea.querySelectorAll(".btn-notif-action");
+    triggerBtns.forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const type = btn.dataset.type;
+        const alertType = btn.dataset.alert || "lowstock";
+        
+        const item = state.items.find(x => x.id === id);
+        if (item) {
+          showToast(`Sending ${type} alert for ${item.name}...`, "info");
+          await sendAlertNotification(item, type, "manual", alertType);
+        }
+      });
+    });
   }
 
   // Run app initializer
