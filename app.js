@@ -379,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
       navItems.forEach(n => n.classList.remove("active"));
       item.classList.add("active");
       state.currentTab = item.dataset.tab;
-      
+
       // Update heading title based on tab
       const tabTitles = {
         overview: "Dashboard Overview",
@@ -392,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alerts: "Notification & Alerts Configuration"
       };
       pageTitle.textContent = tabTitles[state.currentTab] || "StockMind AI";
-      
+
       renderPage();
     });
   });
@@ -442,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("toastContainer");
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
-    
+
     let icon = "";
     if (type === "success") icon = "✓";
     else if (type === "error") icon = "✗";
@@ -650,8 +650,8 @@ document.addEventListener("DOMContentLoaded", () => {
                   </td>
                 </tr>
               ` : state.items.filter(x => x.quantity <= x.reorderLevel).map(item => {
-                const batchQty = item.reorderLevel * 2 || 50;
-                return `
+      const batchQty = item.reorderLevel * 2 || 50;
+      return `
                   <tr>
                     <td><code>${item.sku}</code></td>
                     <td style="font-weight: 600;">${item.name}</td>
@@ -669,7 +669,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -692,16 +692,16 @@ document.addEventListener("DOMContentLoaded", () => {
             </thead>
             <tbody>
               ${state.items.slice(0, 5).map(item => {
-                let statusClass = "instock";
-                let statusText = "In Stock";
-                if (item.quantity === 0) {
-                  statusClass = "outstock";
-                  statusText = "Out of Stock";
-                } else if (item.quantity <= item.reorderLevel) {
-                  statusClass = "lowstock";
-                  statusText = "Low Stock Alert";
-                }
-                return `
+      let statusClass = "instock";
+      let statusText = "In Stock";
+      if (item.quantity === 0) {
+        statusClass = "outstock";
+        statusText = "Out of Stock";
+      } else if (item.quantity <= item.reorderLevel) {
+        statusClass = "lowstock";
+        statusText = "Low Stock Alert";
+      }
+      return `
                   <tr>
                     <td><code>${item.sku}</code></td>
                     <td style="font-weight: 600;">${item.name}</td>
@@ -711,7 +711,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td><span class="badge-status ${statusClass}">${statusText}</span></td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -765,20 +765,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (lineContainer && state.items.length > 0) {
       const w = lineContainer.clientWidth;
       const h = 240;
-      
+
       const padding = 40;
       const graphW = w - padding * 2;
       const graphH = h - padding * 2;
-      
+
       const maxVal = Math.max(...aggregateSales) * 1.15;
-      
+
       // Build svg graph points
       const points = aggregateSales.map((val, idx) => {
         const x = padding + (idx / (aggregateSales.length - 1)) * graphW;
         const y = h - padding - (val / maxVal) * graphH;
         return { x, y, val };
       });
-      
+
       const lineD = `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
       const areaD = `${lineD} L ${points[points.length - 1].x} ${h - padding} L ${points[0].x} ${h - padding} Z`;
 
@@ -843,7 +843,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Colors for charts
       const colors = ["#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ec4899", "#3b82f6"];
-      
+
       const r = 50;
       const cx = 80;
       const cy = 80;
@@ -884,7 +884,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <circle cx="${cx}" cy="${cy}" r="${r}" class="donut-ring" />
             ${segmentsSVG}
             <g class="donut-center-text">
-              <text x="${cx}" y="${cy - 4}" class="donut-text-val">$${Math.round(totalValSum/1000)}k</text>
+              <text x="${cx}" y="${cy - 4}" class="donut-text-val">$${Math.round(totalValSum / 1000)}k</text>
               <text x="${cx}" y="${cy + 14}" class="donut-text-lbl">value</text>
             </g>
           </svg>
@@ -906,11 +906,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Filter items based on state query / category dropdown
     let filteredItems = state.items.filter(item => {
       const matchQuery = item.name.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-                         item.sku.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(state.searchQuery.toLowerCase());
-      
+        item.sku.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(state.searchQuery.toLowerCase());
+
       const matchCat = state.filters.category === "all" || item.category === state.filters.category;
-      
+
       let matchStatus = true;
       if (state.filters.status === "instock") {
         matchStatus = item.quantity > item.reorderLevel;
@@ -985,17 +985,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 </td>
               </tr>
             ` : filteredItems.map(item => {
-              let statusClass = "instock";
-              let statusText = "In Stock";
-              if (item.quantity === 0) {
-                statusClass = "outstock";
-                statusText = "Out of Stock";
-              } else if (item.quantity <= item.reorderLevel) {
-                statusClass = "lowstock";
-                statusText = "Low Stock";
-              }
+      let statusClass = "instock";
+      let statusText = "In Stock";
+      if (item.quantity === 0) {
+        statusClass = "outstock";
+        statusText = "Out of Stock";
+      } else if (item.quantity <= item.reorderLevel) {
+        statusClass = "lowstock";
+        statusText = "Low Stock";
+      }
 
-              return `
+      return `
                 <tr>
                   <td><code>${item.sku}</code></td>
                   <td style="font-weight: 600;">${item.name}</td>
@@ -1035,7 +1035,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   </td>
                 </tr>
               `;
-            }).join("")}
+    }).join("")}
           </tbody>
         </table>
       </div>
@@ -1153,7 +1153,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Quantity Quick Ajusters (+ / -)
     const incBtns = contentArea.querySelectorAll(".btn-qty.increment");
     const decBtns = contentArea.querySelectorAll(".btn-qty.decrement");
-    
+
     incBtns.forEach(btn => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
@@ -1217,10 +1217,10 @@ document.addEventListener("DOMContentLoaded", () => {
     openAddModalBtn.addEventListener("click", () => openFormModal());
     closeModalBtn.addEventListener("click", closeFormModal);
     cancelModalBtn.addEventListener("click", closeFormModal);
-    
+
     productForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      
+
       const id = document.getElementById("itemId").value || null;
       const itemData = {
         name: document.getElementById("itemName").value,
@@ -1282,7 +1282,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderForecastPage() {
     // Generate options list of products
     const options = state.items.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
-    
+
     contentArea.innerHTML = `
       <div class="forecast-summary-grid">
         <div class="forecast-item-card">
@@ -1337,7 +1337,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("fqSalesCount").textContent = totalQuarterSales.toLocaleString() + " units";
     document.getElementById("fqTopCategory").textContent = "Electronics"; // Standard highlight
-    
+
     // Optimal restock calculation
     const outOfStockValueNeeded = state.items
       .filter(x => x.quantity <= x.reorderLevel)
@@ -1433,7 +1433,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderLocationsPage() {
     // Collect items per zone
     const locationsMap = {};
-    
+
     // Baseline storage capacity totals
     const zones = [
       { id: "zone-a", name: "Zone A - High Security Shelf 2", capacity: 400 },
@@ -1454,7 +1454,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Populate actual items inside locations
     state.items.forEach(item => {
       let locName = item.location;
-      
+
       // Clean fuzzy locations to match basic zones if possible
       let matchedZone = zones.find(z => locName.toLowerCase().includes(z.id.split("-")[1]))?.name || null;
       if (!matchedZone) {
@@ -1479,7 +1479,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Generate AI transfer recommendations dynamically
     const yogurt = state.items.find(x => x.sku === "FOOD-YOG-BLU");
     const pad = state.items.find(x => x.sku === "ELEC-WCP-015");
-    
+
     const suggestions = [];
     if (yogurt && yogurt.location !== "Zone B - Cold Storage") {
       suggestions.push({
@@ -1533,9 +1533,9 @@ document.addEventListener("DOMContentLoaded", () => {
     contentArea.innerHTML = `
       <div class="location-grid">
         ${Object.values(locationsMap).map(loc => {
-          const occupancyPct = Math.min(Math.round((loc.currentVolume / loc.capacity) * 100), 100);
-          
-          return `
+      const occupancyPct = Math.min(Math.round((loc.currentVolume / loc.capacity) * 100), 100);
+
+      return `
             <div class="location-card">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div class="location-name">${loc.name}</div>
@@ -1570,7 +1570,7 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </div>
           `;
-        }).join("")}
+    }).join("")}
       </div>
 
       <!-- AI Inter-Location Transfers -->
@@ -1628,7 +1628,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const listData = itemsWithExpiry.map(item => {
       const expiry = new Date(item.expiryDate);
       const daysLeft = Math.ceil((expiry - dateToday) / (1000 * 60 * 60 * 24));
-      
+
       let suggestion = "Monitor stock levels";
       let alertClass = "";
       let discountPct = 0;
@@ -1678,17 +1678,17 @@ document.addEventListener("DOMContentLoaded", () => {
                   </td>
                 </tr>
               ` : listData.map(item => {
-                let badgeClass = "instock";
-                let badgeText = `${item.daysLeft} days left`;
-                
-                if (item.daysLeft <= 0) {
-                  badgeClass = "outstock";
-                  badgeText = "Expired";
-                } else if (item.daysLeft <= 30) {
-                  badgeClass = "lowstock";
-                }
+      let badgeClass = "instock";
+      let badgeText = `${item.daysLeft} days left`;
 
-                return `
+      if (item.daysLeft <= 0) {
+        badgeClass = "outstock";
+        badgeText = "Expired";
+      } else if (item.daysLeft <= 30) {
+        badgeClass = "lowstock";
+      }
+
+      return `
                   <tr class="${item.alertClass}">
                     <td><code>${item.sku}</code></td>
                     <td style="font-weight:600;">${item.name}</td>
@@ -1707,7 +1707,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -1797,9 +1797,9 @@ document.addEventListener("DOMContentLoaded", () => {
                   </td>
                 </tr>
               ` : lowStockList.map(item => {
-                const batchQty = item.reorderLevel * 2 || 50;
-                const estimatedCost = batchQty * item.price;
-                return `
+      const batchQty = item.reorderLevel * 2 || 50;
+      const estimatedCost = batchQty * item.price;
+      return `
                   <tr>
                     <td><code>${item.sku}</code></td>
                     <td style="font-weight:600;">${item.name}</td>
@@ -1819,7 +1819,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -1856,7 +1856,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const initialMax = getStandardMaxQty(initialItem.category);
       state.shelf.maxQty = initialMax;
       state.shelf.currentQty = Math.min(initialItem.quantity, initialMax);
-      
+
       // Initialize log
       state.shelf.logs = [];
       logTelemetry(`Telemetry initialized. Product [${initialItem.name}] placed on shelf.`, "system");
@@ -1940,12 +1940,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const now = new Date();
       const timeStr = now.toTimeString().split(" ")[0];
       const entry = { time: timeStr, text: message, type };
-      
+
       state.shelf.logs.push(entry);
       if (state.shelf.logs.length > 50) {
         state.shelf.logs.shift(); // Cap logs buffer
       }
-      
+
       updateConsoleDOM();
     }
 
@@ -1957,7 +1957,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let typeClass = "system";
         if (log.type === "warning") typeClass = "warning";
         else if (log.type === "alert") typeClass = "alert";
-        
+
         return `
           <div class="console-line">
             <span class="timestamp">[${log.time}]</span>
@@ -2017,7 +2017,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let itemsHTML = "";
       for (let i = 0; i < state.shelf.currentQty; i++) {
         // Label on first or last item for clarity
-        const label = i === 0 ? "1" : i === state.shelf.currentQty - 1 ? `${i+1}` : "";
+        const label = i === 0 ? "1" : i === state.shelf.currentQty - 1 ? `${i + 1}` : "";
         itemsHTML += `<div class="sim-item ${shapeClass}">${label}</div>`;
       }
       itemsRow.innerHTML = itemsHTML;
@@ -2042,7 +2042,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         const eteDays = state.shelf.currentQty / runRate;
         eteGauge.textContent = `${eteDays.toFixed(1)} d`;
-        
+
         if (eteDays <= 1.0) {
           eteGauge.className = "sensor-value red";
         } else if (eteDays <= 3.0) {
@@ -2058,13 +2058,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (state.shelf.currentQty > 0) {
         const prevQty = state.shelf.currentQty;
         state.shelf.currentQty -= 1;
-        
+
         const prevWeight = prevQty * unitWeight;
         const nextWeight = state.shelf.currentQty * unitWeight;
 
         logTelemetry(`Weight difference detected: -${unitWeight.toFixed(2)}kg (Quantity decreased).`, "system");
         logTelemetry(`Load cells reading adjusted: ${prevWeight.toFixed(2)}kg -> ${nextWeight.toFixed(2)}kg.`, "info");
-        
+
         updateShelfUI();
 
         // Check reorder threshold (<= 30% of capacity)
@@ -2074,23 +2074,23 @@ document.addEventListener("DOMContentLoaded", () => {
           logTelemetry(`Optical verification sensor: count dropped below critical reorder threshold (${reorderLimit} units).`, "warning");
           logTelemetry(`AI Predictive restock trigger: Initialized procurement order.`, "warning");
           showToast(`Shelf sensor triggered Auto-Reorder for ${currentItem.name}!`, "warning");
-          
+
           logTelemetry(`Supplier API call dispatched for restock batch. Order reference: STKM-${Date.now().toString().slice(-6)}.`, "system");
-          
+
           // Simulate supplier shipping delay
           setTimeout(async () => {
             if (state.currentTab === "shelf" && state.shelf.selectedId === currentItem.id) {
               const restockBatch = state.shelf.maxQty - state.shelf.currentQty;
               state.shelf.currentQty = state.shelf.maxQty;
               state.shelf.isReordering = false;
-              
+
               logTelemetry(`Supplier restock shipment arrived at docking port. shelf replenished.`, "system");
               logTelemetry(`Calibrating weight sensor to max load: ${(state.shelf.maxQty * unitWeight).toFixed(2)} kg.`, "system");
               showToast(`Supplier restocked Predictive Shelf: +${restockBatch} units!`, "success");
-              
+
               // Trigger backend API reorder sync
               await API.triggerReorder(currentItem.id);
-              
+
               updateShelfUI();
             } else {
               // Just trigger backend sync and reset state reorder flag if tab changed
@@ -2109,13 +2109,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (state.shelf.currentQty < state.shelf.maxQty) {
         const prevQty = state.shelf.currentQty;
         state.shelf.currentQty += 1;
-        
+
         const prevWeight = prevQty * unitWeight;
         const nextWeight = state.shelf.currentQty * unitWeight;
 
         logTelemetry(`Weight difference detected: +${unitWeight.toFixed(2)}kg (Quantity increased).`, "system");
         logTelemetry(`Load cells reading adjusted: ${prevWeight.toFixed(2)}kg -> ${nextWeight.toFixed(2)}kg.`, "info");
-        
+
         updateShelfUI();
       } else {
         showToast("Predictive Shelf is at maximum capacity!", "error");
@@ -2128,11 +2128,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const restockQty = state.shelf.maxQty - state.shelf.currentQty;
         state.shelf.currentQty = state.shelf.maxQty;
         state.shelf.isReordering = false;
-        
+
         logTelemetry(`Manual override: supplier restock triggered.`, "system");
         logTelemetry(`Replenished +${restockQty} units. Weight sensor calibrated.`, "system");
         showToast(`Manually replenished: +${restockQty} units!`, "success");
-        
+
         await API.triggerReorder(currentItem.id);
         updateShelfUI();
       } else {
@@ -2152,12 +2152,12 @@ document.addEventListener("DOMContentLoaded", () => {
       state.shelf.maxQty = newMax;
       state.shelf.currentQty = Math.min(selectedItem.quantity, newMax);
       state.shelf.isReordering = false;
-      
+
       // Clear logs
       state.shelf.logs = [];
       logTelemetry(`Calibrated telemetry sensors for product [${selectedItem.name}].`, "system");
       logTelemetry(`Load cells tare balanced. Optical arrays calibrated.`, "system");
-      
+
       renderShelfPage();
     });
 
@@ -2176,7 +2176,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (item.quantity <= item.reorderLevel) {
       if (!state.notifications.automatedSent.has(item.id)) {
         state.notifications.automatedSent.add(item.id);
-        
+
         // Show HTML5 Notification if supported and permitted
         if ("Notification" in window) {
           if (Notification.permission === "granted") {
@@ -2185,7 +2185,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
           }
         }
-        
+
         // Dispatch notifications if automated alerts are set to true
         if (state.notifications.enableLowStockSMS) {
           sendAlertNotification(item, "sms", "auto");
@@ -2202,7 +2202,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function sendAlertNotification(item, type, mode = "manual", alertType = "lowstock") {
     const isTest = mode === "manual-test";
-    
+
     // Construct Message
     let text = "";
     let subject = "";
@@ -2226,8 +2226,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       addAlertHistory("whatsapp", item.sku, `WhatsApp Alert dispatched to ${state.notifications.mobile}`);
       showToast("WhatsApp click-to-chat window opened!", "success");
-    } 
-    
+    }
+
     else if (type === "email") {
       if (state.notifications.transportType === "client") {
         // Client side options
@@ -2290,8 +2290,8 @@ document.addEventListener("DOMContentLoaded", () => {
           openMailtoLink(state.notifications.email, subject, emailBody, item.sku);
         }
       }
-    } 
-    
+    }
+
     else if (type === "sms") {
       const plainMsg = text.replace(/\*/g, '').replace(/⚠️/g, 'Alert:');
       if (state.notifications.transportType === "client") {
@@ -2371,7 +2371,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.notifications.history.pop();
     }
     localStorage.setItem("alert_history", JSON.stringify(state.notifications.history));
-    
+
     if (state.currentTab === "alerts") {
       const streamDiv = document.getElementById("phoneAlertsStream");
       if (streamDiv) {
@@ -2596,8 +2596,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 </tr>
               `).join("")}
               ${expiringItems.map(item => {
-                const days = Math.ceil((new Date(item.expiryDate) - dateToday) / (1000 * 60 * 60 * 24));
-                return `
+      const days = Math.ceil((new Date(item.expiryDate) - dateToday) / (1000 * 60 * 60 * 24));
+      return `
                   <tr>
                     <td style="font-weight: 600;">${item.name} <code style="font-size:11px;">(${item.sku})</code></td>
                     <td>${item.category}</td>
@@ -2618,7 +2618,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </td>
                   </tr>
                 `;
-              }).join("")}
+    }).join("")}
             </tbody>
           </table>
         </div>
@@ -2653,7 +2653,7 @@ document.addEventListener("DOMContentLoaded", () => {
           state.notifications.email = emailInput.value.trim();
           state.notifications.mobile = mobileInput.value.trim();
           state.notifications.transportType = transportSelect.value;
-          
+
           const toggleLowStock = document.getElementById("toggleLowStockSMS");
           const toggleExpiry = document.getElementById("toggleExpirySMS");
 
@@ -2686,7 +2686,7 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("alert_enable_low_stock_email", state.notifications.enableLowStockEmail);
           localStorage.setItem("alert_enable_expiry_sms", state.notifications.enableExpirySMS);
           localStorage.setItem("alert_enable_expiry_email", state.notifications.enableExpiryEmail);
-          
+
           localStorage.setItem("alert_twilio_sid", state.notifications.twilioSid);
           localStorage.setItem("alert_twilio_token", state.notifications.twilioToken);
           localStorage.setItem("alert_twilio_from", state.notifications.twilioFrom);
@@ -2696,7 +2696,7 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem("alert_emailjs_template", state.notifications.emailjsTemplate);
 
           showToast("Notification configurations saved successfully!", "success");
-          
+
           // Refresh view
           renderAlertsPage();
         } catch (err) {
@@ -2716,7 +2716,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reorderLevel: 10,
         location: "Zone A - Test Rack"
       };
-      
+
       await sendAlertNotification(testItem, "whatsapp", "manual-test");
       await sendAlertNotification(testItem, "email", "manual-test");
       await sendAlertNotification(testItem, "sms", "manual-test");
@@ -2729,7 +2729,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = btn.dataset.id;
         const type = btn.dataset.type;
         const alertType = btn.dataset.alert || "lowstock";
-        
+
         const item = state.items.find(x => x.id === id);
         if (item) {
           showToast(`Sending ${type} alert for ${item.name}...`, "info");
